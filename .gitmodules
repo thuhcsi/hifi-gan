@@ -1,0 +1,3 @@
+[submodule "mel_extractor"]
+	path = mel_extractor
+	url = https://github.com/thuhcsi/mel_extractor.git

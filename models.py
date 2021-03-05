@@ -1,9 +1,10 @@
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
-from torch.nn import Conv1d, ConvTranspose1d, AvgPool1d, Conv2d
-from torch.nn.utils import weight_norm, remove_weight_norm, spectral_norm
-from utils import init_weights, get_padding
+import torch.nn.functional as F
+from torch.nn import AvgPool1d, Conv1d, Conv2d, ConvTranspose1d
+from torch.nn.utils import remove_weight_norm, spectral_norm, weight_norm
+
+from utils import get_padding, init_weights
 
 LRELU_SLOPE = 0.1
 
@@ -85,7 +86,8 @@ class Generator(torch.nn.Module):
         for i, (u, k) in enumerate(zip(h.upsample_rates, h.upsample_kernel_sizes)):
             self.ups.append(weight_norm(
                 ConvTranspose1d(h.upsample_initial_channel//(2**i), h.upsample_initial_channel//(2**(i+1)),
-                                k, u, padding=(k-u)//2)))
+                                # k, u, padding=(k-u)//2))) # for 22kHz version
+                                k, u, padding=(u//2 + u%2), output_padding=u%2))) # for 16kHz version
 
         self.resblocks = nn.ModuleList()
         for i in range(len(self.ups)):
