@@ -18,10 +18,11 @@ from models import Generator
 
 
 class Vocoder:
-    def __init__(self, checkpoint_dir, checkpoint_file, config_file="config.json", device="cpu"):
-        checkpoint_dir = Path(checkpoint_dir)
+    def __init__(self, checkpoint_file, config_file="config.json", device="cpu"):
+        checkpoint_file = Path(checkpoint_file)
+        checkpoint_dir = checkpoint_file.parent
         self.config = self.load_config(checkpoint_dir / config_file)
-        self.generator = self.load_generator(checkpoint_dir / checkpoint_file, self.config, device)
+        self.generator = self.load_generator(checkpoint_file, self.config, device)
 
 
     def load_config(self, config_file):
@@ -54,11 +55,10 @@ class Vocoder:
             x = torch.FloatTensor(mel.T).unsqueeze(0)
             y_g_hat = self.generator(x)
             audio = y_g_hat.squeeze()
-            audio = audio * MAX_WAV_VALUE
-            audio = audio.cpu().numpy().astype('int16')
+            audio = audio.cpu().numpy()
 
         if output_file:
-            write(output_file, self.config.sampling_rate, audio)
+            write(output_file, self.config.sampling_rate, (audio * MAX_WAV_VALUE).astype('int16'))
         return audio
 
 
@@ -66,9 +66,9 @@ def main():
     print('Initializing Inference Process..')
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input_wavs_dir', default='emodb6_test_files')
+    parser.add_argument('-i', '--input_wavs_dir', required=True)
     parser.add_argument('-o', '--output_dir', default='generated_files')
-    parser.add_argument('--checkpoint_file', default='emodb6/g_00800000')
+    parser.add_argument('--checkpoint_file', required=True)
     args = parser.parse_args()
 
     input_wavs_dir = Path(args.input_wavs_dir)
@@ -76,7 +76,7 @@ def main():
     output_wavs_dir.mkdir(exist_ok=True)
 
 
-    synthesizer = Vocoder("emodb6_hw", "g_00700000", device="cpu")
+    synthesizer = Vocoder(args.checkpoint_file, device="cpu")
 
     mels = [(wav2mel(wavfile)[0], wavfile.name) for wavfile in input_wavs_dir.iterdir()]
     for mel, savename in tqdm(mels):
